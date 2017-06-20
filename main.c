@@ -7,9 +7,20 @@ in standard Linux 32-bit environment */
 //# define _FILE_OFFSET_BITS 64
 
 
+double const SEC_TO_RAD = 4.8481368110953599359e-6; /* radians per arc second */
+double const RAD_TO_DEG = 5.7295779513082320877e1;
+double const PI = 3.14159265358979323846;
+
+
+
 
 //глобальная переменная - указатель на файл de430.bsp
 FILE *bsp_430_file = NULL;
+
+//глобальная переменная - указатель на файл testpo.430
+FILE *test_file = NULL;
+
+
 
 //глобальная структура для хранения всех хэдеров файла
 // либо заполняется функцией load_de430header_fast() from fast_de430bsp.c
@@ -29,44 +40,54 @@ struct de430bsp_file_header fh_struct_slow;
 
 
 //opens and checks de430.bsp file
-FILE* open_bsp_file(char* file_path){
+FILE* open_bsp_file(char* file_path)
+{
 
-    FILE* bsp_file_ptr = NULL;
+	FILE* bsp_file_ptr = NULL;
+	char file_name_buffer[70];
 
-    printf("opening de430.bsp file...\n");
-    bsp_file_ptr = fopen(file_path, "rb");
+	strcpy(file_name_buffer, file_path);
 
-    while (!bsp_file_ptr) {
-        printf("Enter DE file name ? ");
-        gets(&file_path[0]);
-        if (!(bsp_file_ptr = fopen(&file_path[0], "rb")))
-            printf("Can't find DE file <%s>\n", &file_path[0]);
-    }
-    printf("%s is opened\n", file_path);
+	printf("opening de430.bsp file...\n");
+	bsp_file_ptr = fopen(file_path, "rb");
+
+	while (!bsp_file_ptr) {
+		printf("Enter DE file name ? ");
+		fgets(file_name_buffer, sizeof(file_name_buffer), stdin);
+
+		// вместо знака перевода строки ставим \0
+		file_name_buffer[strcspn(file_name_buffer, "\n")] = 0;
+
+		if (!(bsp_file_ptr = fopen(file_name_buffer, "rb")))
+			printf("Can't find DE file <%s>\n", file_name_buffer);
+	}
+	printf("%s is opened\n", file_name_buffer);
 
 
-    printf("fast checking file integrity...\n");
-    if(is_de430bsp_ok(file_path)){
-        printf("check passed\n");
-    } else {
-        printf("the file is damaged!");
-        getchar();
-        return 0;
+	printf("fast checking file integrity...\n");
+	if(is_de430bsp_ok(file_name_buffer)){
+		printf("check passed\n");
+	} else {
+		printf("the file is damaged!");
+		getchar();
+		return 0;
 
-    }
+	}
 
-    printf("slow checking file integrity...\n");
-    if(is_de430bsp_ok_slow(bsp_file_ptr)){
-        printf("check passed\n");
-    } else {
-        printf("the file is damaged!");
-        getchar();
-        return 0;
+	printf("slow checking file integrity...\n");
+	if(is_de430bsp_ok_slow(bsp_file_ptr)){
+		printf("check passed\n");
+	} else {
+		printf("the file is damaged!");
+		getchar();
+		return 0;
 
-    }
+	}
 
-    return bsp_file_ptr;
+	return bsp_file_ptr;
 }
+
+
 
 
 struct Coordinates bsp_file_info(long long int  date_in_seconds, int center_code, int target_code) {
@@ -305,233 +326,124 @@ struct Coordinates bsp_file_info(long long int  date_in_seconds, int center_code
 }
 
 
+/*
+def from_cartesian_to_polar(x, y, z):
+    """
+    conversion of cartesian coordinates x,y,z
+    into polar r, theta, phi
+    theta in [-90 deg, +90 deg]
+    phi in [0 deg, +360 deg]
+    """
+    r = math.sqrt(math.pow(x,2)+math.pow(y,2)+math.pow(z,2))
+    phi = atan2_in_degrees(y, x)
+    if phi < 0:
+        phi = phi +360
+    theta = atan2_in_degrees(z, (math.sqrt(math.pow(x,2)+math.pow(y,2))))
 
-int main() {
+    return r, theta, phi
+
+T = my_birthday_in_sec/86400/36525
+def equatorial_into_ecliptic(t, x, y, z):
+    eps_angle = 23.43929111 - (46.8150 + (0.00059 - 0.001813 * t) * t) * t / 3600.0
+    c = cos_in_degrees(eps_angle)
+    s = sin_in_degrees(eps_angle)
+    v = abs(c) * y + s * z
+    z = -s * y + c * z
+    y = v
+    return x, y, z
+*/
+/*
+struct Coordinates equatorial_into_ecliptic(double const T, struct Coordinates coordinates_of_object){
+
+// Разобраться что такое конкретно Т
+    double eps_angle = 23.43929111 - (46.8150 + (0.00059 - 0.001813 * T) * T) * T / 3600.0;
+    double c = cos_in_degrees(eps_angle);
+    double s = sin_in_degrees(eps_angle);
+    double v = abs(c) * coordinates_of_object.y + s * coordinates_of_object.z;
+    coordinates_of_object.z = -s * coordinates_of_object.y + c * coordinates_of_object.z;
+    coordinates_of_object.y = v;
+
+    return coordinates_of_object;
+}
+
+*/
+
+
+
+int main()
+{
 
 	struct Coordinates coordinates_of_object;
+	//struct Coordinates new_coordinates_of_object;
 
 	long long int seconds_f_jd2000;
 
-    char* file_path = "de430.bsp";
+	char* file_path = "de430.bsp";
 
-    bsp_430_file = open_bsp_file(file_path);
-    if(!bsp_430_file) return 17;
+	bsp_430_file = open_bsp_file(file_path);
+	if(!bsp_430_file) return 17;
 
-	//seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(1978, 5, 17,0, 0, 0);
-	
+
+	struct de430bsp_file_header *header_struct_fast_ptr =  &fh_struct_fast;
+	struct de430bsp_file_header *header_struct_slow_ptr =  &fh_struct_slow;
+	load_de430header_fast(header_struct_fast_ptr);
+	load_de430header_slow(bsp_430_file, header_struct_slow_ptr);
+
+	seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(1978, 5, 17,0, 0, 0);
+
+	//seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(1978, 6, 25,0, 0, 0);
+
 	//seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(2015, 2, 8, 11, 52, 10);
-	
-	seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(2015, 2, 8, 0, 0, 0);
+
+	//seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(2015, 2, 8, 0, 0, 0);
 	printf("seconds_f_jd2000 = %lld\n", seconds_f_jd2000);
 
-    struct de430bsp_file_header *header_struct_fast_ptr =  &fh_struct_fast;
-    struct de430bsp_file_header *header_struct_slow_ptr =  &fh_struct_slow;
-    load_de430header_fast(header_struct_fast_ptr);
-    load_de430header_slow(bsp_430_file, header_struct_slow_ptr);
+	//double T = seconds_f_jd2000/86400/36525;
+	//int temp_i =0;
+
+	double pp[3];
+	double polar[3];
+	int ofdate =1;//flag. if 1 the calculates precess
+	for(int i=0;i<=14;i++){
+
+		coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
+								       i,
+								       header_struct_fast_ptr,bsp_430_file);
+
+		// You can see that the output of this ephemeris is in kilometers.
+		printf("---finally--- \n");
+		printf(" %s[%d] , \n", planet_name(i), i);
+		//printf("%.20e \n", coordinates_of_object.x);
+		//printf("%.20e \n", coordinates_of_object.y);
+		//printf("%.20e \n", coordinates_of_object.z);
 
 
-    //430  1563.07.01 2292124.5 12  3  4       -0.01546545065456724000
-    // 430  1733.11.01 2354329.5 12  3  6       -0.00504575050976365800
-    // 430  2027.11.01 2461710.5 12  3  3       -0.24142010306108470000
-    seconds_f_jd2000 = gregorian_date_to_sec_from_j2000(2027, 11, 1, 0, 0, 0);
-    printf("seconds_f_jd2000 = %lld\n", seconds_f_jd2000);
+		pp[0] = coordinates_of_object.x/AU; //we need coords not in km but in AU
+		pp[1] = coordinates_of_object.y/AU; //we need coords not in km but in AU
+		pp[2] = coordinates_of_object.z/AU; //we need coords not in km but in AU
 
-    coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
-                                                           EARTH,
-                                                           header_struct_fast_ptr,bsp_430_file);
+		//from swemini te = 2489933.501118
+		//lonlat(pp, 2489933.501118, polar, ofdate);
+		lonlat(pp, seconds_f_jd2000/SEC_IN_1_DAY+JD2000+0.5, polar, ofdate);
+		// printf("polar coords. ecliptic long = %f, ecliptic lat = %f, r = %f\n\n", polar[0], polar[1], polar[2]);
+		printf( "ecliptic long" );
+		dms(polar[0]);
+		printf("\n");
+	}
 
-    // You can see that the output of this ephemeris is in kilometers.
-    printf("---finally--- \n");
-    printf(" %s[%d] , \n", planet_name(EARTH), EARTH);
-    printf("%e \n", coordinates_of_object.x);
-    printf("%e \n", coordinates_of_object.y);
-    printf("%e \n", coordinates_of_object.z);
-
-
-
-    coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
-                                                           VENUS,
-                                                           header_struct_slow_ptr,bsp_430_file);
-
-    // You can see that the output of this ephemeris is in kilometers.
-    printf("---finally--- \n");
-    printf(" %s[%d] , \n", planet_name(14), 14);
-    printf("%e \n", coordinates_of_object.x);
-    printf("%e \n", coordinates_of_object.y);
-    printf("%e \n", coordinates_of_object.z);
-
-
-    int temp_i =0;
-    for(int i=MERCURY_BARYCENTER;i<=14;i++){
-
-        if(i<=10){
-            temp_i =i;
-        } else {
-            switch(i){
-                case 11: temp_i = 301; break;
-                case 12: temp_i = 399; break;
-                case 13: temp_i = 199; break;
-                case 14: temp_i = 299; break;
-                default: temp_i = -1;
-            }
-
-        }
-
-/*
-        struct Coordinates temp_coordinates;
-        temp_i = 7;
-
-        coordinates_of_object = bsp_file_info(seconds_f_jd2000, 0, temp_i);
-        printf("---not very finally---\n");
-        printf(" %s[%d] , ", planet_name(temp_i), temp_i);
-        printf("%f \n", coordinates_of_object.x);
-        printf("%f \n", coordinates_of_object.y);
-        printf("%f \n", coordinates_of_object.z);
-
-
-        temp_coordinates = bsp_file_info(seconds_f_jd2000, 0, 3);
-        coordinates_of_object.x -= temp_coordinates.x;
-        coordinates_of_object.y -= temp_coordinates.y;
-        coordinates_of_object.z -= temp_coordinates.z;
-
-        // происходит ли вызов ???
-        temp_coordinates = bsp_file_info(seconds_f_jd2000, 3, 399);
-        coordinates_of_object.x -= temp_coordinates.x;
-        coordinates_of_object.y -= temp_coordinates.y;
-        coordinates_of_object.z -= temp_coordinates.z;
-
-
-        // You can see that the output of this ephemeris is in kilometers.
-        printf("---finally--- \n");
-        printf(" %s[%d] , \n", planet_name(temp_i), temp_i);
-        printf("%e \n", coordinates_of_object.x);
-        printf("%e \n", coordinates_of_object.y);
-        printf("%e \n", coordinates_of_object.z);
-
-*/
+	//Добавить знаки Зодиака
 
 
 
+	//разобраться с неправильным расчетом скоростей
+	//testpo_430_tests(bsp_430_file,header_struct_fast_ptr);
 
-        /*
-
- URANUS BARYCENTER[7] ,
--2.037119e+09
-6.638236e+08
-2.503946e+08
-!!!
- 2.99247897e+09   6.63823591e+08   2.50394557e+08
-
----finally---
- NEPTUNE BARYCENTER[8] ,
--2.037119e+09
--1.676314e+09
--7.909693e+08
-!!!
-4.23564851e+09  -1.67631442e+09  -7.90969345e+08
-
-
----finally---
- PLUTO BARYCENTER[9] ,
-1.235212e+09
--2.236791e+09
--1.767728e+09
-!!!
-1.23521190e+09  -4.54383957e+09  -1.76772807e+09
-
-1. Доделать прогу на Python и сверить результаты. готово!
-2. Разобраться с testpo.430
-3. Какие даты хранит jpl ? tdb ?
-Time stamps in kernel files, and time inputs to and outputs from SPICE routines
-reading kernel data and computing derived geometry, are double precision numbers
-representing epochs in these two time systems: – Numeric Ephemeris Time (TDB),
-expressed as ephemeris seconds past J2000
+	//compare_bsp_swiss_files(header_struct_fast_ptr, bsp_430_file);
+	//make_bsp_swiss_files(header_struct_fast_ptr, bsp_430_file);
 
 
 
-         */
-
-
-
-
-
-    }
-
-
-/*
-    coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
-                                                           MARS_BARYCENTER,
-                                   header_struct_fast_ptr,bsp_430_file);
-    printf("---MARS_BARYCENTER---\n");
-    printf("%e \n", coordinates_of_object.x);
-    printf("%e \n", coordinates_of_object.y);
-    printf("%e \n", coordinates_of_object.z);
-
-    coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
-                                                           MOON,
-                                                           header_struct_fast_ptr,bsp_430_file);
-
-    // You can see that the output of this ephemeris is in kilometers.
-    printf("---MOON--- \n");
-    printf("%e \n", coordinates_of_object.x);
-    printf("%e \n", coordinates_of_object.y);
-    printf("%e \n", coordinates_of_object.z);
-
-
-    coordinates_of_object = calc_geocentric_equ_cartes_pos(seconds_f_jd2000,
-                                                           SUN,
-                                                           header_struct_fast_ptr,bsp_430_file);
-    printf("---SUN---\n");
-    printf("%e \n", coordinates_of_object.x);
-    printf("%e \n", coordinates_of_object.y);
-    printf("%e \n", coordinates_of_object.z);
-*/
-
-/*
-    printf("fh_struct_fast:\n");
-    printf("nd= %d\n", fh_struct_fast.file_record_struct.nd);
-    printf("ni = %d\n", fh_struct_fast.file_record_struct.ni);
-    printf("fward = %d\n", fh_struct_fast.file_record_struct.fward);
-    printf("bward= %d\n", fh_struct_fast.file_record_struct.bward);
-    printf("free = %d\n", fh_struct_fast.file_record_struct.free);
-
-
-    for (int i = 0;
-         i < (int)fh_struct_fast.summary_record_struct.total_summaries_number; i++) {
-
-        printf("Summaries[%2d] = ", i);
-        printf(" %.2f,",fh_struct_fast.summaries_line_struct[i].segment_start_time); // в сек от J2000
-        printf(" %.2f,", fh_struct_fast.summaries_line_struct[i].segment_last_time); // в сек от J2000
-        printf("%20s[%3d],  ", planet_name(fh_struct_fast.summaries_line_struct[i].target_code),fh_struct_fast.summaries_line_struct[i].target_code);
-        printf("%20s[%2d],  ", planet_name(fh_struct_fast.summaries_line_struct[i].center_code),fh_struct_fast.summaries_line_struct[i].center_code);
-        printf(" %d, ", fh_struct_fast.summaries_line_struct[i].ref_frame); // ??? always 1
-        printf(" %d, ", fh_struct_fast.summaries_line_struct[i].type_of_data); // always 2 - planet
-        printf("%d, ", fh_struct_fast.summaries_line_struct[i].record_start_adress);
-        printf("%d, ", fh_struct_fast.summaries_line_struct[i].record_last_adress);
-        printf("\n");
-    }
-
-
-        for (int i = 0; i < (int)file_header_ptr->summary_record_struct.total_summaries_number; i++) {
-        fread(&file_header_ptr->summaries_line_struct[i], sizeof(file_header_ptr->summaries_line_struct[0]), 1, bsp_430_file);
-        printf("Summaries[%2d] = ", i);
-        printf(" %.2f,",file_header_ptr->summaries_line_struct[i].segment_start_time); // в сек от J2000
-        printf(" %.2f,", file_header_ptr->summaries_line_struct[i].segment_last_time); // в сек от J2000
-        printf("%20s[%3d],  ", planet_name(file_header_ptr->summaries_line_struct[i].target_code),
-               file_header_ptr->summaries_line_struct[i].target_code);
-        printf("%20s[%2d],  ", planet_name(file_header_ptr->summaries_line_struct[i].center_code),
-               file_header_ptr->summaries_line_struct[i].center_code);
-        // printf(" %d, ", file_header_ptr->summaries_line_struct[i].ref_frame); // ??? always 1
-        // printf(" %d, ", file_header_ptr->summaries_line_struct[i].type_of_data); // always 2 - planet
-        printf("%d, ", file_header_ptr->summaries_line_struct[i].record_start_adress);
-        printf("%d, ", file_header_ptr->summaries_line_struct[i].record_last_adress);
-        printf("\n");
-    }
-
-
-*/
-
-    getchar();
-    fclose(bsp_430_file);
+	//getchar();
+	fclose(bsp_430_file);
 	return 0;
 }

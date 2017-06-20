@@ -11,6 +11,17 @@
 
 #include "fast_de430bsp/fast_de430bsp.h"
 #include "slow_de430bsp/slow_de430bsp.h"
+#include "tests/tests.h"
+
+#define JD2000 2451545.0 //12:00 UT on January 1, 2000
+#define SEC_IN_1_DAY 86400 // seconds in 24 hours
+#define AU 0.149597870700000000E+09 //km 149597870.7
+#define METER 0.001/AU
+#define EPSILON 0.01 * METER
+extern double const SEC_TO_RAD; /* radians per arc second */
+extern double const RAD_TO_DEG;
+extern double const PI;
+
 
 
 #define SOLAR_SYS_BARY.    0
@@ -54,7 +65,9 @@ double der_chebyshev(int order, double x, double* data);
 char* planet_name(int naif_id); // finds and returns planet name by naif_id number
 long long int gregorian_date_to_sec_from_j2000(int year, int month, int day,
 									int hour, int minutes, int seconds);
-
+double zatan2(double x, double y);
+int dms(double x);
+int lonlat( double pp[], double J, double polar[], int ofdate);
 
 struct Coordinates {
     double x;

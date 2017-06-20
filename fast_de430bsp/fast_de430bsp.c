@@ -233,12 +233,14 @@ int load_de430header_fast(struct de430bsp_file_header *file_header_ptr){
 }
 
 
+
 //gets barycentric equatorial Cartesian positions and velocities
 // relative to the equinox 2000/ICRS
 struct Coordinates get_coordinates(long long int  date_in_seconds,
                                    int target_code, int center_code,
                                    struct de430bsp_file_header *file_header_ptr,
-                                                              FILE *bsp_430_file) {
+                                                              FILE *bsp_430_file)
+{
 struct Coordinates pos;
 
 long int array_info_offset;
@@ -295,7 +297,8 @@ for (int i = 0; i <= (int) file_header_ptr->summary_record_struct.total_summarie
         fseek(bsp_430_file, array_info_offset, SEEK_SET);
         //SEEK_SET- с начала файла,SEEK_CUR-тек.позиция, SEEK_END - с конца
 
-        /*читаем double init - start time of the first record in array
+        /*читаем
+        double init - start time of the first record in array
         double intlen - the length of one record (seconds)
         double rsize - number of elements in one record
         double n - number of records in segment*/
@@ -309,20 +312,35 @@ for (int i = 0; i <= (int) file_header_ptr->summary_record_struct.total_summarie
 
 */
         // находим смещение на нужную запись внутри массива
+        // округляется вниз до конца предыдущей записи
         internal_offset =
                 floor((date_in_seconds - array_info.init) / array_info.intlen)
                 * (int) array_info.rsize;
 
         // встаем на начало нужной записи
-        int record = 8 * (int) (file_header_ptr->summaries_line_struct[i].record_start_adress + internal_offset);
+        int record = 8 *
+            (int) (file_header_ptr->summaries_line_struct[i].record_start_adress + internal_offset);
+
+        /*The first two elements in the record, MID and RADIUS, are the midpoint and radius
+        of the time interval covered by coefficients in the record.
+        These are used as parameters to perform transformations between
+        the domain of the record (from MID - RADIUS to MID + RADIUS)
+        and the domain of Chebyshev polynomials (from -1 to 1 ).
+        The same number of coefficients is always used for each component,
+        and all records are the same size (RSIZE),
+        so the degree of each polynomial is
+        ( RSIZE - 2 ) / 3 - 1
+          // the degree of the polynomial is number_of_coefficients-1
+         но по факту почему то используется ( RSIZE - 2 ) / 3 ????
+         */
         int order = (int) ((array_info.rsize - 2) / 3 - 1);
 
-        //self._mem[record - 8:record + int(rsize) * 8]  ??? почему -8 ?
+        //summaries_line_struct[i].record_start_adress - 1
+        //почему то стартовый адрес первой записи на 1 слово больше чем надо, поэтому вычитаем 8
         fseek(bsp_430_file, (record-8), SEEK_SET);
         //SEEK_SET- с начала файла,SEEK_CUR-тек.позиция, SEEK_END - с конца
 
         double *array_of_coffs = malloc(array_info.rsize * 8);
-        //double array_of_coffs[280];
         fread(array_of_coffs, (int) (array_info.rsize * 8), 1, bsp_430_file);
 
 
@@ -367,10 +385,18 @@ for (int i = 0; i <= (int) file_header_ptr->summary_record_struct.total_summarie
         printf("%f \n", y_coord1);
         printf("%f \n", z_coord1);*/
 
-        free(array_of_coffs);
+	    free(array_of_coffs);
+	    return pos;
+    } else {
+	  // printf("\ncoordinates didn't found\n");
+	    pos.x =0;
+	    pos.y =0;
+	    pos.z =0;
+	    pos.velocity_x = 0;
+	    pos.velocity_y =0;
+	    pos.velocity_z =0;
     }
 }
-
 
 return pos;
 
@@ -404,21 +430,26 @@ struct Coordinates calc_geocentric_equ_cartes_pos(long long int  date_in_seconds
 
     coordinates_of_object = get_coordinates(date_in_seconds, improved_target_code, imroved_center_code,
                                                                          file_header_ptr, bsp_430_file);
-
+/*
     printf("calc_geocentric_equ_cartes_pos\n");
     printf(" %s[%d] , \n", planet_name(improved_target_code), improved_target_code);
     printf(" center_code = [%d] , \n", imroved_center_code);
     printf("%e \n", coordinates_of_object.x);
     printf("%e \n", coordinates_of_object.y);
     printf("%e \n", coordinates_of_object.z);
+*/
+    // для Луны не надо вычислять Earth Barycenter , она изначально относительно него
+    if(improved_target_code !=301){
+        temp_coordinates = get_coordinates(date_in_seconds, 3, 0,
+                                           file_header_ptr,
+                                           bsp_430_file);
 
-    temp_coordinates = get_coordinates(date_in_seconds, 3, 0,
-                                       file_header_ptr,
-                                       bsp_430_file);
+        coordinates_of_object.x -= temp_coordinates.x;
+        coordinates_of_object.y -= temp_coordinates.y;
+        coordinates_of_object.z -= temp_coordinates.z;
 
-    coordinates_of_object.x -= temp_coordinates.x;
-    coordinates_of_object.y -= temp_coordinates.y;
-    coordinates_of_object.z -= temp_coordinates.z;
+    }
+
 
     temp_coordinates = get_coordinates(date_in_seconds, 399, 3,
                                        file_header_ptr,

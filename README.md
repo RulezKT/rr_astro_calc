@@ -1,11 +1,10 @@
-Reinventing the wheel.
+**Reinventing the wheel.**
 Making ephemeris calculation library in pure C.
 
-
-Велосипедю велосипед.
+**Велосипедю велосипед.**
 Делаю библиотеку для расчета эфемерид на чистом C.
 
-Erfinde das Rad neu.
+**Erfinde das Rad neu.**
 Mache Bibliothek für Ephemeris Berechnung in pur C.
 
 ftp://naif.jpl.nasa.gov/pub/naif/toolkit_docs/FORTRAN/req/daf.html
@@ -15,6 +14,28 @@ https://naif.jpl.nasa.gov/naif/
 ftp://ssd.jpl.nasa.gov/pub/eph/planets/bsp
 ftp://ssd.jpl.nasa.gov/pub/eph/planets/ascii/
 
+The original JPL ephemeris provides **barycentric equatorial Cartesian positions 
+relative to the equinox 2000/ICRS**.
+
+Time stamps in kernel files, and time inputs to and outputs from SPICE routines
+reading kernel data and computing derived geometry, are double precision numbers
+representing epochs in these two time systems: – **Numeric Ephemeris Time (TDB),
+expressed as ephemeris seconds past J2000**.
+
+We need planet positions at midnight Universal time, ecliptic coordinates,
+geocentric apparent positions relative to true equinox of date, as 
+usual in western astrology.
+
+**So:**
+1. We take positions from bsp file with respect to the center of the solar system.
+2. Calculate positions with respect to the Earth. From Planet to the Solar System barycenter then 
+to the Earth-Moon barycenter and finally to Earth itself.
+3. Convert coordinates from equatorial into ecliptic.
+4. Convert coordinates from cartesian to polar.
+
+5. Convert from decimals to degrees minutes seconds ?
+6. Convert from seconds to TDB seconds ?
+7. Nutations and librations ?
 
 
 /*
@@ -190,3 +211,87 @@ This string is assembled using components returned from the SPICELIB private rou
 	3. The number of summaries stored in this record.
 	*/
 
+https://habrahabr.ru/post/130401/
+https://en.wikipedia.org/wiki/Leap_second
+A leap second is a one-second adjustment that is occasionally applied to Coordinated Universal Time (UTC) in order to keep its time of day close to the mean solar time, or UT1. Without such a correction, time reckoned by Earth's rotation drifts away from atomic time because of irregularities in the Earth's rate of rotation. Since this system of correction was implemented in 1972, 27 leap seconds have been inserted, the most recent on December 31, 2016 at 23:59:60 UTC.[1]
+https://en.wikipedia.org/wiki/Tz_database
+
+Terrestrial Time (TT) is a modern astronomical time standard defined by the International Astronomical Union, primarily for time-measurements of astronomical observations made from the surface of Earth.[1] For example, the Astronomical Almanac uses TT for its tables of positions (ephemerides) of the Sun, Moon and planets as seen from Earth. In this role, TT continues Terrestrial Dynamical Time (TDT or TD),[2] which in turn succeeded ephemeris time (ET). TT shares the original purpose for which ET was designed, to be free of the irregularities in the rotation of Earth.
+
+The unit of TT is the SI second, the definition of which is currently based on the caesium atomic clock,[3] but TT is not itself defined by atomic clocks. It is a theoretical ideal, and real clocks can only approximate it.
+
+TT is distinct from the time scale often used as a basis for civil purposes, Coordinated Universal Time (UTC). TT indirectly underlies UTC, via International Atomic Time (TAI). Because of the historical difference between TAI and ET when TT was introduced, TT is approximately 32.184 s ahead of TAI.
+
+
+https://en.wikipedia.org/wiki/Terrestrial_Time
+https://en.wikipedia.org/wiki/Barycentric_Dynamical_Time
+
+http://astroutils.astronomy.ohio-state.edu/time/
+http://astroutils.astronomy.ohio-state.edu/time/bjd_explanation.html
+
+https://ru.wikipedia.org/wiki/%D0%94%D0%B5%D0%BA%D1%80%D0%B5%D1%82%D0%BD%D0%BE%D0%B5_%D0%B2%D1%80%D0%B5%D0%BC%D1%8F
+
+http://www.gmt.su/time-calculator/
+
+
+
+
+
+ Время
+Нутация
+Прецессия
+Градусы – в дроби
+Системы из одной в другую
+
+
+Время.
+Вводные данные в местном времени.
+1. Корректируем перевод на зимнее-летнее время
+2. Перевод в Гринвич – ЮТС
+3. Перевод в Numeric Ephemeris Time (TDB),
+expressed as ephemeris seconds past J2000
+4. Mercury Barycenter (1) и Mercury Barycenter (1) -> Mercury (199)
+    SwissEph считает Mercury Barycenter (1). Почему? Тоже самое Венера.
+
+
+https://www.freehoroscopesastrology.com/best-astrologers-astrology-websites-online.aspx
+https://sotis-online.ru
+http://astrologic.ru/time.htm
+https://de.wikipedia.org/wiki/Sommerzeit
+https://www.timeanddate.de/sommerzeit/deutschland
+
+
+File de430.bsp with 14 segments:
+2287184.50..2688976.50  
+Solar System Barycenter (0) -> Mercury Barycenter (1)
+Solar System Barycenter (0) -> Venus Barycenter (2)
+Solar System Barycenter (0) -> Earth Barycenter (3)
+Solar System Barycenter (0) -> Mars Barycenter (4)
+Solar System Barycenter (0) -> Jupiter Barycenter (5)
+Solar System Barycenter (0) -> Saturn Barycenter (6)
+Solar System Barycenter (0) -> Uranus Barycenter (7)
+Solar System Barycenter (0) -> Neptune Barycenter (8)
+Solar System Barycenter (0) -> Pluto Barycenter (9)
+Solar System Barycenter (0) -> Sun (10)
+       Earth Barycenter (3) -> Moon (301)
+       Earth Barycenter (3) -> Earth (399)
+     Mercury Barycenter (1) -> Mercury (199)
+       Venus Barycenter (2) -> Venus (299)
+
+Moshier использует get_coordinates + JD
+SwissEph использует приведение к ET
+SwissEph  - calc_geocentric_equ_cartes_pos все планеты совпадают
+
+
+/*
+
+1. Доделать прогу на Python и сверить результаты. готово!
+2. Разобраться с testpo.430
+3. Какие даты хранит jpl ? tdb ?
+Time stamps in kernel files, and time inputs to and outputs from SPICE routines
+reading kernel data and computing derived geometry, are double precision numbers
+representing epochs in these two time systems: – Numeric Ephemeris Time (TDB),
+expressed as ephemeris seconds past J2000
+ 4. Экстремумы в датах
+
+*/
