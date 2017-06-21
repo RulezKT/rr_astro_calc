@@ -1,5 +1,5 @@
 
-#include "auxiliary.h"
+#include "auxiliary/auxiliary.h"
 
 
 /* the binary file with DE431 is so large that the following line is necessary
@@ -21,9 +21,37 @@ FILE *bsp_430_file = NULL;
 FILE *test_file = NULL;
 
 
+/*
+№ Symb. Long.	Latin name	English
+1	♈	0°		Aries		The Ram
+2	♉	30°		Taurus		The Bull
+3	♊	60°		Gemini		The Twins
+4	♋	90°		Cancer		The Crab
+5	♌	120°	Leo			The Lion
+6	♍	150°	Virgo		The Maiden
+7	♎	180°	Libra		The Scales
+8	♏	210°	Scorpio		The Scorpion
+9	♐	240°	Sagittarius	The (Centaur) Archer
+10	♑	270°	Capricorn	"Goat-horned" (The Sea-Goat)
+11	♒	300°	Aquarius	The Water-Bearer
+12	♓	330°	Pisces		The Fish[31]
+
+*/
+char const zodiac_names[12][12] = {"Aries",
+								   "Taurus",
+								   "Gemini",
+								   "Cancer",
+								   "Leo",
+								   "Virgo",
+								   "Libra",
+								   "Scorpio",
+								   "Sagittarius",
+								   "Capricorn",
+								   "Aquarius",
+								   "Pisces"};
 
 //глобальная структура для хранения всех хэдеров файла
-// либо заполняется функцией load_de430header_fast() from fast_de430bsp.c
+// либо заполняется функцией load_de430header_fast() from 430bsp.c
 // либо грузится из файла функцией load_de430header_slow() from slow_de430bsp.c
 struct de430bsp_file_header fh_struct_fast;
 struct de430bsp_file_header fh_struct_slow;
@@ -369,12 +397,13 @@ struct Coordinates equatorial_into_ecliptic(double const T, struct Coordinates c
 */
 
 
-
 int main()
 {
 
 	struct Coordinates coordinates_of_object;
 	//struct Coordinates new_coordinates_of_object;
+
+	struct zodiac planet_in_zod;
 
 	long long int seconds_f_jd2000;
 
@@ -429,9 +458,14 @@ int main()
 		printf( "ecliptic long" );
 		dms(polar[0]);
 		printf("\n");
+		dms_advanced(polar[0], &planet_in_zod);
+		printf( "%s %3dd %02d\' %05.2f\" \n",zodiac_names[planet_in_zod.name], planet_in_zod.degrees,
+				planet_in_zod.minutes, planet_in_zod.seconds);
+
 	}
 
-	//Добавить знаки Зодиака
+	//добавить гексаграммы и Землю и самое главное время!!!
+
 
 	//разобраться с неправильным расчетом скоростей
 	//testpo_430_tests(bsp_430_file,header_struct_fast_ptr);
@@ -445,3 +479,4 @@ int main()
 	fclose(bsp_430_file);
 	return 0;
 }
+

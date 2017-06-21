@@ -9,9 +9,8 @@
 #include <sys/stat.h>
 #include <math.h>
 
-#include "fast_de430bsp/fast_de430bsp.h"
-#include "slow_de430bsp/slow_de430bsp.h"
-#include "tests/tests.h"
+#include "../430bsp/fast_de430bsp.h"
+#include "../tests/tests.h"
 
 #define JD2000 2451545.0 //12:00 UT on January 1, 2000
 #define SEC_IN_1_DAY 86400 // seconds in 24 hours
@@ -49,13 +48,20 @@ extern double const PI;
 
 
 
+struct zodiac{
+	int name;  //according to zodiac_names
+	int degrees;
+	int minutes;
+	double seconds;
+};
 
+extern char const zodiac_names[12][12] ;
 
 //глобальная переменная - указатель на файл de430.bsp
 // extern FILE *bsp_430_file;
 
 //глобальная структура для хранения всех хэдеров файла
-// либо заполняется функцией load_de430header_fast() from fast_de430bsp.c
+// либо заполняется функцией load_de430header_fast() from 430bsp.c
 // либо грузится из файла функцией load_de430header_slow() from slow_de430bsp.c
 extern struct de430bsp_file_header de430bsp_file_header_struct;
 
@@ -67,6 +73,7 @@ long long int gregorian_date_to_sec_from_j2000(int year, int month, int day,
 									int hour, int minutes, int seconds);
 double zatan2(double x, double y);
 int dms(double x);
+int dms_advanced(double x, struct zodiac *planet);
 int lonlat( double pp[], double J, double polar[], int ofdate);
 
 struct Coordinates {

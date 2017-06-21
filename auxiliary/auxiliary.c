@@ -288,7 +288,41 @@ int dms(double x)
 	return(0);
 }
 
+/* Radians to degrees, minutes, seconds
+ */
+int dms_advanced(double x, struct zodiac *planet)
+{
+	double s;
+	int d, m;
 
+	s = x * RAD_TO_DEG;
+
+	planet->name = (int)(s/30);
+
+	s = fmod(s,30);
+
+	if( s < 0.0 )
+	{
+		printf( " -" );
+		s = -s;
+	}
+	else
+	{
+		printf( "  " );
+	}
+	d = (int) s;
+	s -= d;
+	s *= 60;
+	m = (int) s;
+	s -= m;
+	s *= 60;
+
+	planet->degrees = d;
+	planet->minutes = m;
+	planet->seconds = s;
+
+	return(0);
+}
 
 
 

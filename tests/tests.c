@@ -423,7 +423,7 @@ FILE *swiss_file = fopen("swis_orig.tests","r");
 char my_buffer[82];
 char swiss_buffer[82];
 
-#define MIN_ERROR_LEVEL 0.03
+#define MIN_ERROR_LEVEL 0.025
 #define MAX_ERROR_LEVEL 359.98
 
 int strings_count =0;
